@@ -1,10 +1,10 @@
 homeassistant:
-  name: Bear Stone
+  name: Home
   latitude: !secret homeassistant_latitude
   longitude: !secret homeassistant_longitude
-  elevation: !secret homeassistant_elevation
-  unit_system: imperial
-  time_zone: America/New_York
+  elevation: 0
+  unit_system: metric
+  time_zone: Europe/London
   customize: !include_dir_merge_named customize
   customize_domain:
     automation:
