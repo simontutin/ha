@@ -1,0 +1,32 @@
+######################################################################
+##  Stuff that needs to happen at 05:50am.
+######################################################################
+
+- alias: 'Timed 550'
+  trigger:
+    - platform: time
+      at: '05:50:00'
+
+  condition:
+    - condition: state
+      entity_id: group.family
+      state: home
+    - condition: state
+      entity_id: input_boolean.school_mode
+      state: 'on'
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+
+  action:
+    - service: homeassistant.turn_on
+      entity_id:
+        - group.dining_room_lights
+        - light.fridge
+        - light.k2
+        - light.k3
+        - light.k5

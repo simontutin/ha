@@ -1,0 +1,7 @@
+###################################################
+## Various MQTT sensors
+###################################################
+
+- platform: mqtt
+  state_topic: "dash/medicine/medicine_time"
+  name: "Medicine time"

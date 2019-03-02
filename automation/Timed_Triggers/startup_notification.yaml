@@ -1,0 +1,27 @@
+###################################
+##  Start Up Section
+###################################
+
+- alias: Startup Notification and Shut startup lights
+  hide_entity: True
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - service: script.notify_engine
+      data_template:
+        value1: 'Startup: Home Assistant is Up and Running!'
+        who: 'carlo'
+
+    - service: light.turn_off
+      entity_id: group.hallway_lights
+
+    - service: mqtt.publish
+      data:
+        topic: "garadget/Garadget Small/command"
+        payload: "get-status"
+
+    - service: mqtt.publish
+      data:
+        topic: "garadget/Garadget Large/command"
+        payload: "get-status"

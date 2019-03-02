@@ -1,0 +1,56 @@
+#-------------------------------------------
+# @CCOSTAN
+# Original Repo : https://github.com/CCOSTAN/Home-AssistantConfig
+#-------------------------------------------
+homeassistant:
+  customize:
+    sensor.download_grafana_solar:
+      hidden: true
+      homebridge_hidden: True
+#-------------------------------------------
+
+sensor:
+    - platform: command_line
+      name: "Download Grafana Solar"
+      command: 'curl -s -H "Authorization: Bearer eyJrIjoiZ0UwS1hpRVdCbFVVSTNSdER0Z29maHc4QmVuSXhxalYiLCJuIjoiSEFDYW1lcmEiLCJpZCI6MX0=" "http://192.168.10.10:3000/render/d/h_wosLIik/solar?orgId=1&panelId=1&width=1200&height=700&from=now-1d/d&to=now-1d/d" > /config/www/custom_ui/floorplan/images/branding/solar_readings.png'
+      scan_interval: 3000
+
+camera:
+  - platform: generic
+    name: "Grafana Solar Graph"
+    still_image_url: 'http://192.168.10.10:3000/render/d/h_wosLIik/solar?orgId=1&panelId=1&width=1000&height=700&from=now-24h&to=now'
+    username: HA
+    password: HA
+
+  # - platform: local_file
+  #   name: "Grafana Solar Graph"
+  #   file_path: /config/www/custom_ui/floorplan/images/branding/solar_readings.png
+
+##############################################################################
+###  Automations - Detect when things are not right. Like any Good Watchdog.
+##############################################################################
+automation:
+  - alias: 'Tweet Solar Production'
+    hide_entity: false
+    trigger:
+      - platform: sun
+        event: sunset
+        offset: '+01:00:00'
+    action:
+      - service: script.tweet_engine_image
+        data_template:
+          tweet: >-
+            {{ [
+            "I have just finished crunching the numbers and here is the latest #Solar Production report. "
+            ] | random + " #Charts #Tesla "
+            + [
+             "(https://youtu.be/BartadUzGOA)",
+             "(https://www.vcloudinfo.com/2018/01/going-green-to-save-some-green-in-2018.html)",
+             "(https://www.vcloudinfo.com/2018/09/re-installing-tesla-solar-panels-again.html)"
+             ]| random
+             }}
+          image: >-
+            {% set pictures = [
+              "/config/www/custom_ui/floorplan/images/branding/solar_readings.png"
+            ] %}
+            {{ pictures|random }}

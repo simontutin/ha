@@ -1,0 +1,58 @@
+#-------------------------------------------
+# @CCOSTAN
+# Original Repo : https://github.com/CCOSTAN/Home-AssistantConfig
+#-------------------------------------------
+# homeassistant:
+#   customize:
+#     sensor.process_mosquitto:
+#       friendly_name: 'Mosquitto'
+#
+#       hidden: False
+
+#-------------------------------------------
+sensor:
+  - platform: systemmonitor
+    resources:
+      # - type: last_boot
+      - type: last_boot
+      - type: disk_use_percent
+        arg: /
+
+#-------------------------------------------
+##############################################################################
+###  Automations - Detect when things are not right. Like any Good Watchdog.
+##############################################################################
+
+automation:
+
+  - alias: "Self Heal Disk Use Alarm"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.disk_use_percent
+        above: 80
+    action:
+      - service: script.notify_engine
+        data_template:
+          value1: 'Hard Drive Monitor:'
+          value2: "Your harddrive is running out of Space! /dev/root:{{ states.sensor.disk_use_percent.state }}%!"
+          value3: 'Attempting to clean'
+          who: 'carlo'
+      - service: tts.clear_cache
+
+  - alias: "Disk Use Alarm"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.disk_use_percent
+        above: 90
+    action:
+      - service: script.notify_engine
+        data_template:
+          value1: 'Hard Drive Monitor:'
+          value2: "Your harddrive is running out of Space! /dev/root:{{ states.sensor.disk_use_percent.state }}%!"
+          who: 'carlo'
+
+      - service: persistent_notification.create
+        data:
+          title: "Hard Drive Monitor:"
+          message: "Your harddrive is running out of Space! /dev/root:{{ states.sensor.disk_use_percent.state }}%!"
+          notification_id: "Critical Alert"

@@ -1,0 +1,139 @@
+#-------------------------------------------
+# @CCOSTAN
+# Original Repo : https://github.com/CCOSTAN/Home-AssistantConfig
+# Neato Support for D7 Connected Botvac - control my [Neato Vacuum](http://amzn.to/2kqnnqu) with Home Assistant.
+#-------------------------------------------
+homeassistant:
+  customize_glob:
+    "*.carlojuice*":
+      homebridge_hidden: True
+      hidden: False
+#-------------------------------------------
+juicenet:
+    access_token: !secret juicenet_access_token
+
+switch:
+  - platform: command_line
+    switches:
+      juicebox_restart:
+        command_on: "/usr/bin/curl -k 'http://192.168.10.91/command/reboot'"
+        friendly_name: Restart Juicebox
+
+group:
+  juicenet:
+    name: JuiceBox Charger
+    control: hidden
+    entities:
+      - sensor.carlojuice_amps
+      - sensor.carlojuice_charge_time
+      - sensor.carlojuice_charging_status
+      - sensor.carlojuice_energy_added
+      - sensor.carlojuice_temperature
+      - sensor.carlojuice_voltage
+      - sensor.carlojuice_watts
+      - switch.juicebox_restart
+
+#############################################################################
+###  Automations - Alerts related to the JuiceBox (http://amzn.to/2AZVQ37)
+##############################################################################
+automation:
+  - alias: 'Car Charging Alerts'
+    initial_state: 'on'
+    trigger:
+      - platform: state
+        entity_id: sensor.carlojuice_charging_status
+
+    action:
+      - service: script.notify_engine
+        data_template:
+          value1: "The Garage charger is now in {{ states('sensor.carlojuice_charging_status') }} mode."
+          who: 'carlo'
+
+  - alias: 'Juicebox Self-Heal'
+    initial_state: 'on'
+    trigger:
+      - platform: state
+        entity_id: sensor.carlojuice_charging_status
+        to: 'disconnect'
+        for:
+          minutes: 6
+      - platform: time_pattern
+        hours: '/4'
+
+    condition:
+      - condition: state
+        entity_id: sensor.carlojuice_charging_status
+        state: 'disconnect'
+        for:
+          minutes: 5
+      - condition: template
+        value_template: >
+          {%- if states.automation.juicebox_selfheal.attributes.last_triggered -%}
+            {{ (as_timestamp(now()) - as_timestamp(states.automation.juicebox_selfheal.attributes.last_triggered)) > 10000 }}
+          {%- else -%}
+            true
+          {%- endif -%}
+
+    action:
+      - service: homeassistant.turn_on
+        entity_id: switch.juicebox_restart
+
+      - service: script.tweet_engine_image
+        data_template:
+          tweet: >
+            {{ [
+            "The #JuiceBox Pro had to be restarted. It was unable to connect back to @emotorwerks servers.",
+            "Unfortunately, the Juicebox Pro sometimes can no longer connect to @emotorwerks servers.  Fortunately, #HomeAssistant can fix that with a restart!"
+            ] | random + " (https://www.vcloudinfo.com/2018/06/using-home-assistant-to-fix-my-juicebox.html) #SelfHeal #EV #BoltEV "}}
+          image: >-
+            {{ [
+            "/config/www/custom_ui/floorplan/images/branding/car.png",
+            "/config/www/custom_ui/floorplan/images/branding/bearstone_car.png",
+            "/config/www/custom_ui/floorplan/images/branding/batteries.png",
+            "/config/www/custom_ui/floorplan/images/branding/charge.png"
+            ] | random }}
+
+  - alias: 'JuiceBox AMP Alert!'
+    initial_state: 'on'
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.carlojuice_amps
+        above: 24
+        for:
+          minutes: 2
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.alert_mode
+
+      - service: script.notify_engine
+        data_template:
+          value1: "The Juice Box Charger is pulling {{ states('sensor.carlojuice_amps') }} AMPs.  This is above the safety mark of 30.  Please unplug charger immediately."
+          who: 'parents'
+
+      - service: script.speech_engine
+        data_template:
+          value1: "The Juice Box Charger is pulling {{ states('sensor.carlojuice_amps') }} AMPs.  This is above the safety mark of 30.  Please unplug charger immediately."
+
+  - alias: 'JuiceBox Tweet Stat!'
+    initial_state: 'on'
+    trigger:
+      - platform: state
+        entity_id: sensor.carlojuice_charging_status
+        from: 'charging'
+    action:
+      - delay: '0{{ range(0,3) | random | int }}:{{ range(0,5) | random | int }}{{ range(0,9) | random | int }}:00'
+      - service: script.tweet_engine_image
+        data_template:
+          tweet: >
+            {{ [
+            "The #Chevy Bolt Charged for {{(states.sensor.carlojuice_charge_time.state  | int /60) | round() }} minutes and Juiced up {{states.sensor.carlojuice_energy_added.state |int /1000}} KwHs.",
+            "The last charging session was {{(states.sensor.carlojuice_charge_time.state  | int /60) | round() }} minutes. Added {{states.sensor.carlojuice_energy_added.state |int /1000}} KwHs ",
+            "The Juice Box Pro added {{states.sensor.carlojuice_energy_added.state |int /1000}} KwHs to the #Chevy #BoltEV in {{(states.sensor.carlojuice_charge_time.state  | int /60) | round() }} minutes."
+            ] | random + " (https://github.com/CCOSTAN/Home-AssistantConfig#garage) #Electric #Solar"}}
+          image: >-
+            {{ [
+            "/config/www/custom_ui/floorplan/images/branding/car.png",
+            "/config/www/custom_ui/floorplan/images/branding/bearstone_car.png",
+            "/config/www/custom_ui/floorplan/images/branding/batteries.png",
+            "/config/www/custom_ui/floorplan/images/branding/charge.png"
+            ] | random }}
